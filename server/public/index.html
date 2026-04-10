@@ -410,6 +410,16 @@
       <!-- emoji grid populated by JS -->
     </div>
   </div>
+
+  <div id="screen-share-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:80;flex-direction:column;justify-content:center;align-items:center;gap:20px;">
+    <div id="screen-share-container" style="width:90%;height:80%;border-radius:12px;overflow:hidden;background:#000;"></div>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button id="ss-stop-btn" type="button" style="padding:12px 20px;border-radius:8px;border:none;background:#ff4455;color:#fff;font-weight:700;cursor:pointer;">Stop Share</button>
+      <button id="ss-video-btn" type="button" style="padding:12px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;">Video Off</button>
+      <button id="ss-leave-btn" type="button" style="padding:12px 20px;border-radius:8px;border:1.5px solid #ff4455;background:transparent;color:#ff4455;font-weight:700;cursor:pointer;">Leave Call</button>
+      <button id="ss-mute-btn" type="button" style="padding:12px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;">Mute</button>
+    </div>
+  </div>
 </div>
 
 <div id="profile-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:70;">
@@ -485,6 +495,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const videoBtn     = document.getElementById('video-btn');
   const screenBtn    = document.getElementById('screen-btn');
   const mediaContainer = document.getElementById('media-container');
+  const screenSharePanel = document.getElementById('screen-share-panel');
+  const screenShareContainer = document.getElementById('screen-share-container');
+  const ssStopBtn = document.getElementById('ss-stop-btn');
+  const ssVideoBtn = document.getElementById('ss-video-btn');
+  const ssLeaveBtn = document.getElementById('ss-leave-btn');
+  const ssMuteBtn = document.getElementById('ss-mute-btn');
 
   let socket, myUsername = '', currentRoom = null;
   let rooms = [], typingTimeout;
@@ -1081,7 +1097,25 @@ document.addEventListener('DOMContentLoaded', function () {
       inVoice = true;
       callType = type;
       // update UI
-      voiceBar.classList.add('visible');
+      if (type === 'screen') {
+        // show screen share panel with self-view
+        screenSharePanel.style.display = 'flex';
+        const selfVideo = document.createElement('video');
+        selfVideo.autoplay = true;
+        selfVideo.muted = true;
+        selfVideo.playsInline = true;
+        selfVideo.style.width = '100%';
+        selfVideo.style.height = '100%';
+        selfVideo.style.objectFit = 'contain';
+        selfVideo.srcObject = stream;
+        screenShareContainer.innerHTML = '';
+        screenShareContainer.appendChild(selfVideo);
+        ssVideoBtn.textContent = 'Video Off';
+        ssMuteBtn.textContent = 'Mute';
+      } else {
+        voiceBar.classList.add('visible');
+        screenSharePanel.style.display = 'none';
+      }
       voiceBtn.classList.toggle('active', type === 'audio');
       videoBtn.classList.toggle('active', type === 'video');
       screenBtn.classList.toggle('active', type === 'screen');
@@ -1107,6 +1141,16 @@ document.addEventListener('DOMContentLoaded', function () {
   videoBtn.addEventListener('click', () => toggleCall('video'));
   screenBtn.addEventListener('click', () => toggleCall('screen'));
 
+  ssStopBtn.addEventListener('click', leaveVoice);
+  ssVideoBtn.addEventListener('click', () => toggleCall('video'));
+  ssLeaveBtn.addEventListener('click', leaveVoice);
+  ssMuteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    ssMuteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+  });
+
   muteBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
@@ -1127,6 +1171,8 @@ document.addEventListener('DOMContentLoaded', function () {
     voiceBar.classList.remove('visible');
     muteBtn.textContent = 'Mute';
     muteBtn.classList.remove('muted');
+    screenSharePanel.style.display = 'none';
+    screenShareContainer.innerHTML = '';
     Object.keys(peers).forEach(closePeer);
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     callType = null;
