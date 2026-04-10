@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChatApp</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg:       #0a0e1a;
+    --surface:  #0f1624;
+    --panel:    #121a2e;
+    --border:   #1e2d4a;
+    --accent:   #00aaff;
+    --accent2:  #0077cc;
+    --green:    #00cc66;
+    --red:      #ff4455;
+    --text:     #cdd9f0;
+    --muted:    #4a6080;
+    --white:    #e8f0ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 14px;
+    background: var(--bg);
+  }
+
+  .login-logo {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .login-logo span { color: var(--green); }
+
+  .login-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: -8px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #login-screen input {
+    width: 320px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--panel);
+    color: var(--white);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #login-screen input:focus { border-color: var(--accent); }
+  #login-screen input::placeholder { color: var(--muted); }
+
+  #connect-btn {
+    width: 320px;
+    padding: 13px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 4px;
+  }
+
+  #connect-btn:hover  { background: var(--accent2); }
+  #connect-btn:active { transform: scale(0.98); }
+  #connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .login-error { color: var(--red); font-size: 0.85rem; min-height: 18px; }
+
+  /* ── APP ── */
+  #app { display: none; flex-direction: row; height: 100vh; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 220px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 12px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  .sidebar-logo span { color: var(--green); }
+
+  .sidebar-section-title {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    padding-left: 4px;
+  }
+
+  #room-list { flex: 1; overflow-y: auto; margin-bottom: 8px; }
+
+  .room-item {
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--muted);
+    transition: background 0.12s, color 0.12s;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .room-item::before { content: '#'; font-weight: 700; color: var(--border); font-size: 0.9rem; }
+  .room-item:hover  { background: var(--border); color: var(--text); }
+  .room-item.active { background: #00aaff18; color: var(--accent); font-weight: 600; }
+  .room-item.active::before { color: var(--accent); }
+
+  #add-room-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  #new-room-input {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--white);
+    font-size: 0.82rem;
+    outline: none;
+  }
+  #new-room-input:focus { border-color: var(--accent); }
+  #new-room-input::placeholder { color: var(--muted); }
+  #add-room-btn {
+    padding: 7px 11px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: background 0.15s;
+  }
+  #add-room-btn:hover { background: var(--border); }
+
+  #online-section { border-top: 1px solid var(--border); padding-top: 12px; }
+  .user-chip {
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+  /* Chat area */
+  #chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  #chat-header {
+    padding: 14px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #chat-header h2 { font-size: 1rem; color: var(--white); font-weight: 700; letter-spacing: 0.5px; }
+  #typing-indicator { font-size: 0.75rem; color: var(--accent); margin-left: auto; min-height: 16px; font-style: italic; }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg);
+  }
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg { display: flex; flex-direction: column; max-width: 72%; }
+  .msg.me    { align-self: flex-end;   align-items: flex-end; }
+  .msg.other { align-self: flex-start; }
+  .msg.system { align-self: center; }
+
+  .msg-meta { font-size: 0.7rem; color: var(--muted); margin-bottom: 3px; padding: 0 4px; }
+  .msg.me .msg-meta { text-align: right; }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .msg.me    .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+  .msg.other .msg-bubble { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .msg.system .msg-bubble { background: transparent; color: var(--muted); font-size: 0.75rem; font-style: italic; padding: 2px 10px; }
+
+  /* Voice bar */
+  #voice-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    background: #00cc6618;
+    border-top: 1px solid #00cc6644;
+    font-size: 0.82rem;
+    color: var(--green);
+  }
+  #voice-bar.visible { display: flex; }
+  .vc-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  #voice-users-label { font-weight: 600; }
+  #mute-btn {
+    margin-left: auto;
+    padding: 4px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--green);
+    background: transparent;
+    color: var(--green);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  #mute-btn:hover { background: var(--green); color: #000; }
+  #mute-btn.muted { border-color: var(--red); color: var(--red); }
+  #mute-btn.muted:hover { background: var(--red); color: #fff; }
+
+  /* Input row */
+  #input-row {
+    padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    align-items: center;
+  }
+
+  #voice-btn {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  #voice-btn:hover  { border-color: var(--green); color: var(--green); }
+  #voice-btn.active { background: #00cc6618; border-color: var(--green); color: var(--green); }
+  #voice-btn.muted  { background: #ff445518; border-color: var(--red);   color: var(--red); }
+
+  /* Video / Screen buttons reuse voice styles */
+  #video-btn, #screen-btn { margin-right: 8px; }
+
+  #msg-input {
+    flex: 1;
+    padding: 11px 16px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--white);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #msg-input:focus { border-color: var(--accent); }
+  #msg-input::placeholder { color: var(--muted); }
+  #msg-input:disabled { opacity: 0.4; }
+
+  #send-btn {
+    padding: 11px 22px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  #send-btn:hover  { background: var(--accent2); }
+  #send-btn:active { transform: scale(0.97); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-logo">Chat<span>App</span></div>
+  <div class="login-sub">Squad communication</div>
+  <input id="username-input" type="text" placeholder="Your name" maxlength="24" autocomplete="off" />
+  <input id="room-input"     type="text" placeholder="Room (e.g. general)" value="general" autocomplete="off" />
+  <button id="connect-btn">Connect</button>
+  <span class="login-error" id="login-error"></span>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div id="sidebar">
+    <div class="sidebar-logo">Chat<span>App</span></div>
+
+    <div class="sidebar-section-title">Rooms</div>
+    <div id="room-list"></div>
+    <div id="add-room-row">
+      <input id="new-room-input" type="text" placeholder="New room..." maxlength="30" />
+      <button id="add-room-btn">+</button>
+    </div>
+
+    <div id="online-section">
+      <div class="sidebar-section-title">Online</div>
+      <div id="user-list"></div>
+    </div>
+  </div>
+
+  <div id="chat-area">
+    <div id="chat-header">
+      <h2 id="room-title">#general</h2>
+      <span id="typing-indicator"></span>
+    </div>
+    <div id="messages"></div>
+    <div id="voice-bar">
+      <div class="vc-pulse"></div>
+      <span>Voice &bull; </span><span id="voice-users-label"></span>
+      <div id="media-container" style="display:flex;gap:8px;margin-left:12px;align-items:center;"></div>
+      <button id="mute-btn">Mute</button>
+    </div>
+    <div id="input-row">
+      <button id="voice-btn">Mic Off</button>
+      <button id="video-btn">Video Off</button>
+      <button id="screen-btn">Share Screen</button>
+      <input id="msg-input" type="text" placeholder="Type a message..." maxlength="2000" />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  const loginScreen  = document.getElementById('login-screen');
+  const appEl        = document.getElementById('app');
+  const usernameEl   = document.getElementById('username-input');
+  const roomEl       = document.getElementById('room-input');
+  const connectBtn   = document.getElementById('connect-btn');
+  const loginError   = document.getElementById('login-error');
+  const messagesEl   = document.getElementById('messages');
+  const msgInput     = document.getElementById('msg-input');
+  const sendBtn      = document.getElementById('send-btn');
+  const roomListEl   = document.getElementById('room-list');
+  const userListEl   = document.getElementById('user-list');
+  const roomTitle    = document.getElementById('room-title');
+  const typingEl     = document.getElementById('typing-indicator');
+  const newRoomInput = document.getElementById('new-room-input');
+  const addRoomBtn   = document.getElementById('add-room-btn');
+  const voiceBtn     = document.getElementById('voice-btn');
+  const voiceBar     = document.getElementById('voice-bar');
+  const muteBtn      = document.getElementById('mute-btn');
+  const voiceLbl     = document.getElementById('voice-users-label');
+  const videoBtn     = document.getElementById('video-btn');
+  const screenBtn    = document.getElementById('screen-btn');
+  const mediaContainer = document.getElementById('media-container');
+
+  let socket, myUsername = '', currentRoom = 'general';
+  let rooms = ['general'], typingTimeout;
+  let inVoice = false, isMuted = false, localStream = null;
+  let callType = null; // 'audio' | 'video' | 'screen' | null
+  const peers = {}, audioEls = {};
+  const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function appendMsg(msg) {
+    const div = document.createElement('div');
+    if (msg.user === 'System') {
+      div.className = 'msg system';
+      div.innerHTML = `<div class="msg-bubble">${esc(msg.text)}</div>`;
+    } else {
+      const isMe = msg.user === myUsername;
+      div.className = 'msg ' + (isMe ? 'me' : 'other');
+      const time = new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      div.innerHTML = `<div class="msg-meta">${isMe ? time : esc(msg.user) + ' &bull; ' + time}</div><div class="msg-bubble">${esc(msg.text)}</div>`;
+    }
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function renderRooms() {
+    roomListEl.innerHTML = '';
+    rooms.forEach(r => {
+      const d = document.createElement('div');
+      d.className = 'room-item' + (r === currentRoom ? ' active' : '');
+      d.textContent = r;
+      d.onclick = () => switchRoom(r);
+      roomListEl.appendChild(d);
+    });
+    roomTitle.textContent = '#' + currentRoom;
+  }
+
+  function switchRoom(room) {
+    if (room === currentRoom) return;
+    currentRoom = room;
+    messagesEl.innerHTML = '';
+    renderRooms();
+    socket.emit('join', { username: myUsername, room });
+  }
+
+  // Connect
+  connectBtn.addEventListener('click', doConnect);
+  usernameEl.addEventListener('keydown', e => { if (e.key === 'Enter') doConnect(); });
+  roomEl.addEventListener('keydown',     e => { if (e.key === 'Enter') doConnect(); });
+
+  function doConnect() {
+    const username = usernameEl.value.trim();
+    const room     = roomEl.value.trim() || 'general';
+    if (!username) { loginError.textContent = 'Enter your name first.'; usernameEl.focus(); return; }
+    loginError.textContent = '';
+    connectBtn.textContent = 'Connecting...';
+    connectBtn.disabled = true;
+
+    // Connect to the same server that served this page
+    socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+      myUsername = username;
+      currentRoom = room;
+      if (!rooms.includes(room)) rooms.push(room);
+      loginScreen.style.display = 'none';
+      appEl.style.display = 'flex';
+      renderRooms();
+      socket.emit('join', { username, room });
+      setupVoice();
+      msgInput.focus();
+    });
+
+    socket.on('connect_error', () => {
+      loginError.textContent = 'Could not connect. Is the server running?';
+      connectBtn.textContent = 'Connect';
+      connectBtn.disabled = false;
+    });
+
+    socket.on('history', msgs => { messagesEl.innerHTML = ''; msgs.forEach(appendMsg); });
+    socket.on('message', appendMsg);
+
+    socket.on('users', users => {
+      userListEl.innerHTML = '';
+      users.forEach(u => {
+        const d = document.createElement('div');
+        d.className = 'user-chip';
+        d.innerHTML = `<div class="online-dot"></div>${esc(u)}`;
+        userListEl.appendChild(d);
+      });
+    });
+
+    socket.on('typing', ({ user, isTyping }) => {
+      typingEl.textContent = isTyping ? `${user} is typing...` : '';
+    });
+  }
+
+  // Rooms
+  addRoomBtn.addEventListener('click', () => {
+    const r = newRoomInput.value.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!r) return;
+    if (!rooms.includes(r)) rooms.push(r);
+    newRoomInput.value = '';
+    switchRoom(r);
+    renderRooms();
+  });
+  newRoomInput.addEventListener('keydown', e => { if (e.key === 'Enter') addRoomBtn.click(); });
+
+  // Messages
+  sendBtn.addEventListener('click', sendMessage);
+  msgInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  msgInput.addEventListener('input', () => {
+    if (!socket) return;
+    socket.emit('typing', true);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => socket.emit('typing', false), 1500);
+  });
+
+  function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text || !socket) return;
+    socket.emit('message', { text });
+    msgInput.value = '';
+    socket.emit('typing', false);
+  }
+
+  // Voice (WebRTC)
+  function setupVoice() {
+    socket.on('voice-existing-users', async users => {
+      for (const { socketId } of users) await createPeer(socketId, true);
+    });
+    socket.on('voice-user-joined', async ({ socketId }) => {
+      if (!inVoice) return;
+      await createPeer(socketId, false);
+    });
+    socket.on('voice-offer', async ({ from, offer }) => {
+      if (!inVoice) return;
+      let pc = peers[from] || await createPeer(from, false);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('voice-answer', { to: from, answer });
+    });
+    socket.on('voice-answer', async ({ from, answer }) => {
+      if (peers[from]) await peers[from].setRemoteDescription(new RTCSessionDescription(answer));
+    });
+    socket.on('voice-ice', async ({ from, candidate }) => {
+      try { if (peers[from]) await peers[from].addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
+    });
+    socket.on('voice-user-left', ({ socketId }) => closePeer(socketId));
+    socket.on('voice-users', users => { voiceLbl.textContent = users.join(', '); });
+  }
+
+  async function startCall(type) {
+    if (!socket) return;
+    try {
+      let stream = null;
+      if (type === 'audio') {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } else if (type === 'video') {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      } else if (type === 'screen') {
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        } catch (e) {
+          // Some browsers don't provide audio with getDisplayMedia; try to combine
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          try {
+            const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioOnly.getAudioTracks().forEach(t => stream.addTrack(t));
+          } catch (err) {
+            // proceed without audio
+          }
+        }
+      }
+      if (!stream) throw new Error('Could not obtain media');
+      localStream = stream;
+      inVoice = true;
+      callType = type;
+      // update UI
+      voiceBar.classList.add('visible');
+      voiceBtn.classList.toggle('active', type === 'audio');
+      videoBtn.classList.toggle('active', type === 'video');
+      screenBtn.classList.toggle('active', type === 'screen');
+      voiceBtn.textContent = (type === 'audio' && !isMuted) ? 'Mic On' : (type === 'audio' && isMuted) ? 'Muted' : 'Mic Off';
+      videoBtn.textContent = type === 'video' ? 'Video On' : 'Video Off';
+      screenBtn.textContent = type === 'screen' ? 'Stop Share' : 'Share Screen';
+      socket.emit('voice-join');
+    } catch (err) {
+      alert('Media error: ' + (err && err.message ? err.message : err));
+    }
+  }
+
+  async function toggleCall(type) {
+    if (!inVoice) return startCall(type);
+    if (callType === type) return leaveVoice();
+    // switch type
+    leaveVoice();
+    await new Promise(r => setTimeout(r, 200));
+    return startCall(type);
+  }
+
+  voiceBtn.addEventListener('click', () => toggleCall('audio'));
+  videoBtn.addEventListener('click', () => toggleCall('video'));
+  screenBtn.addEventListener('click', () => toggleCall('screen'));
+
+  muteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    muteBtn.classList.toggle('muted', isMuted);
+    voiceBtn.classList.toggle('muted', isMuted);
+    voiceBtn.textContent = isMuted ? 'Muted' : 'Mic On';
+  });
+
+  function leaveVoice() {
+    inVoice = false; isMuted = false;
+    voiceBtn.textContent = 'Mic Off';
+    videoBtn.textContent = 'Video Off';
+    screenBtn.textContent = 'Share Screen';
+    voiceBtn.classList.remove('active', 'muted');
+    videoBtn.classList.remove('active');
+    screenBtn.classList.remove('active');
+    voiceBar.classList.remove('visible');
+    muteBtn.textContent = 'Mute';
+    muteBtn.classList.remove('muted');
+    Object.keys(peers).forEach(closePeer);
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    callType = null;
+    // clear remote media
+    if (mediaContainer) mediaContainer.innerHTML = '';
+    socket.emit('voice-leave');
+  }
+
+  async function createPeer(socketId, initiator) {
+    const pc = new RTCPeerConnection(ICE);
+    peers[socketId] = pc;
+    if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    pc.onicecandidate = e => { if (e.candidate) socket.emit('voice-ice', { to: socketId, candidate: e.candidate }); };
+    pc.ontrack = e => {
+      const stream = e.streams[0];
+      if (!stream) return;
+      const hasVideo = stream.getVideoTracks().length > 0;
+      if (!audioEls[socketId]) {
+        const el = hasVideo ? document.createElement('video') : document.createElement('audio');
+        el.autoplay = true;
+        el.playsInline = true;
+        if (hasVideo) {
+          el.width = 200;
+          el.height = 140;
+          el.style.borderRadius = '8px';
+        }
+        if (mediaContainer) mediaContainer.appendChild(el); else document.body.appendChild(el);
+        audioEls[socketId] = el;
+      }
+      audioEls[socketId].srcObject = stream;
+    };
+    if (initiator) {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('voice-offer', { to: socketId, offer });
+    }
+    return pc;
+  }
+
+  function closePeer(socketId) {
+    if (peers[socketId])   { peers[socketId].close(); delete peers[socketId]; }
+    if (audioEls[socketId]) { audioEls[socketId].remove(); delete audioEls[socketId]; }
+  }
+
+});
+</script>
+</body>
+</html>

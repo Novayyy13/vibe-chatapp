@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIBE</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+  :root {
+    --bg:       #0a0e1a;
+    --surface:  #0f1624;
+    --panel:    #121a2e;
+    --border:   #1e2d4a;
+    --accent:   #00aaff;
+    --accent2:  #0077cc;
+    --green:    #00cc66;
+    --red:      #ff4455;
+    --text:     #cdd9f0;
+    --muted:    #4a6080;
+    --white:    #e8f0ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── SIGNUP ── */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    gap: 14px;
+    background: var(--bg);
+  }
+
+  .login-logo {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .login-logo span { color: var(--green); }
+
+  .login-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: -8px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  #login-screen input {
+    width: 320px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--panel);
+    color: var(--white);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #login-screen input:focus { border-color: var(--accent); }
+  #login-screen input::placeholder { color: var(--muted); }
+
+  #connect-btn {
+    width: 320px;
+    padding: 13px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 4px;
+  }
+
+  #connect-btn:hover  { background: var(--accent2); }
+  #connect-btn:active { transform: scale(0.98); }
+  #connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .login-error { color: var(--red); font-size: 0.85rem; min-height: 18px; }
+
+  /* ── APP ── */
+  #app { display: none; flex-direction: row; height: 100vh; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 220px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 12px;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  .sidebar-logo span { color: var(--green); }
+
+  .sidebar-section-title {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    padding-left: 4px;
+  }
+
+  #room-list { flex: 1; overflow-y: auto; margin-bottom: 8px; }
+
+  .room-item {
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--muted);
+    transition: background 0.12s, color 0.12s;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .room-item::before { content: '#'; font-weight: 700; color: var(--border); font-size: 0.9rem; }
+  .room-item:hover  { background: var(--border); color: var(--text); }
+  .room-item.active { background: #00aaff18; color: var(--accent); font-weight: 600; }
+  .room-item.active::before { color: var(--accent); }
+
+  #add-room-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  #new-room-input {
+    flex: 1;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--white);
+    font-size: 0.82rem;
+    outline: none;
+  }
+  #new-room-input:focus { border-color: var(--accent); }
+  #new-room-input::placeholder { color: var(--muted); }
+  #add-room-btn {
+    padding: 7px 11px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: background 0.15s;
+  }
+  #add-room-btn:hover { background: var(--border); }
+
+  #online-section { border-top: 1px solid var(--border); padding-top: 12px; }
+  .user-chip {
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+  /* Chat area */
+  #chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  #chat-header {
+    padding: 14px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #chat-header h2 { font-size: 1rem; color: var(--white); font-weight: 700; letter-spacing: 0.5px; }
+  #typing-indicator { font-size: 0.75rem; color: var(--accent); margin-left: auto; min-height: 16px; font-style: italic; }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg);
+  }
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg { display: flex; flex-direction: column; max-width: 72%; }
+  .msg.me    { align-self: flex-end;   align-items: flex-end; }
+  .msg.other { align-self: flex-start; }
+  .msg.system { align-self: center; }
+
+  .msg-meta { font-size: 0.7rem; color: var(--muted); margin-bottom: 3px; padding: 0 4px; }
+  .msg.me .msg-meta { text-align: right; }
+
+  .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .msg.me    .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+  .msg.other .msg-bubble { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .msg.system .msg-bubble { background: transparent; color: var(--muted); font-size: 0.75rem; font-style: italic; padding: 2px 10px; }
+
+  /* Voice bar */
+  #voice-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    background: #00cc6618;
+    border-top: 1px solid #00cc6644;
+    font-size: 0.82rem;
+    color: var(--green);
+  }
+  #voice-bar.visible { display: flex; }
+  .vc-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  #voice-users-label { font-weight: 600; }
+  #mute-btn {
+    margin-left: auto;
+    padding: 4px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--green);
+    background: transparent;
+    color: var(--green);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  #mute-btn:hover { background: var(--green); color: #000; }
+  #mute-btn.muted { border-color: var(--red); color: var(--red); }
+  #mute-btn.muted:hover { background: var(--red); color: #fff; }
+
+  /* Input row */
+  #input-row {
+    padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    align-items: center;
+  }
+
+  #voice-btn {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  #voice-btn:hover  { border-color: var(--green); color: var(--green); }
+  #voice-btn.active { background: #00cc6618; border-color: var(--green); color: var(--green); }
+  #voice-btn.muted  { background: #ff445518; border-color: var(--red);   color: var(--red); }
+
+  /* Video / Screen buttons reuse voice styles */
+  #video-btn, #screen-btn { margin-right: 8px; }
+
+  #msg-input {
+    flex: 1;
+    padding: 11px 16px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--white);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #msg-input:focus { border-color: var(--accent); }
+  #msg-input::placeholder { color: var(--muted); }
+  #msg-input:disabled { opacity: 0.4; }
+
+  #send-btn {
+    padding: 11px 22px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background 0.15s, transform 0.1s;
+    flex-shrink: 0;
+  }
+  #send-btn:hover  { background: var(--accent2); }
+  #send-btn:active { transform: scale(0.97); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+  <div id="login-screen">
+  <div class="login-logo">VIBE</div>
+  <div class="login-sub" id="form-subtitle">Sign up to your vibe space</div>
+  <div id="remembered-name" style="font-size:0.95rem;color:var(--text);margin-bottom:8px;display:none;"></div>
+  <input id="username-input" type="text" placeholder="Your display name" maxlength="24" autocomplete="off" />
+  <input id="email-input" type="email" placeholder="Your email" maxlength="48" autocomplete="off" />
+  <input id="password-input" type="password" placeholder="Create a password" maxlength="32" autocomplete="off" />
+  <div id="robot-block" style="display:flex;align-items:center;gap:10px; width:320px; margin-top:4px;">
+    <input id="robot-check" type="checkbox" style="width:18px;height:18px;" />
+    <label for="robot-check" style="font-size:0.9rem;color:var(--text);">I'm not a robot</label>
+  </div>
+  <div id="code-block" style="display:flex;gap:8px;width:320px;flex-wrap:wrap;align-items:center; margin-top:6px;">
+    <input id="code-input" type="text" placeholder="Verification code" maxlength="6" autocomplete="off" style="flex:1;" />
+    <button id="code-btn" type="button" style="padding:12px 14px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;">Send Code</button>
+  </div>
+  <span id="code-status" style="color:var(--muted);font-size:0.85rem;min-height:18px;display:block;width:320px;">Enter your email and click Send Code.</span>
+  <button id="connect-btn">Sign Up</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+    <span style="color:var(--muted);font-size:0.9rem;">Already signed up?</span>
+    <button id="switch-auth" type="button" style="background:none;border:none;color:var(--accent);cursor:pointer;font-weight:700;">Login</button>
+  </div>
+  <span class="login-error" id="login-error"></span>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div id="sidebar">
+    <div class="sidebar-logo">VIBE</div>
+
+    <div class="sidebar-section-title">Search contacts</div>
+    <input id="contact-search" type="search" placeholder="Search online..." style="width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--white);margin-bottom:10px;" />
+    <div id="search-result" style="min-height:90px;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:rgba(0,0,0,0.12);color:var(--text);margin-bottom:12px;display:flex;align-items:center;justify-content:center;text-align:center;">
+      <span style="color:var(--muted);font-size:0.92rem;">Search a contact and press Enter to show request actions here.</span>
+    </div>
+    <div class="sidebar-section-title">Contacts</div>
+    <div id="user-list"></div>
+    <button id="create-group-btn" type="button" style="margin-top:10px;padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--accent);cursor:pointer;font-weight:700;">Create Group</button>
+
+    <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:12px;">
+      <div class="sidebar-section-title">Background</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="bg-color" type="color" title="Pick background color" />
+      </div>
+    </div>
+    <div id="group-section" style="margin-top:12px;">
+      <div class="sidebar-section-title">Groups</div>
+      <div id="group-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+  </div>
+
+  <div id="chat-area">
+    <div id="chat-header">
+      <h2 id="room-title">Pick a contact to start your vibe</h2>
+      <span id="typing-indicator"></span>
+    </div>
+    <div id="messages"></div>
+    <div id="voice-bar">
+      <div class="vc-pulse"></div>
+      <span>Voice &bull; </span><span id="voice-users-label"></span>
+      <div id="media-container" style="display:flex;gap:8px;margin-left:12px;align-items:center;"></div>
+      <button id="mute-btn">Mute</button>
+    </div>
+    <div id="input-row">
+      <button id="voice-btn">Mic Off</button>
+      <button id="video-btn">Video Off</button>
+      <button id="screen-btn">Share Screen</button>
+      <button id="emoji-btn" title="Emoji" style="padding:8px 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;">😊</button>
+      <input id="msg-input" type="text" placeholder="Type a message..." maxlength="2000" />
+      <button id="send-btn">Send</button>
+    </div>
+    <div id="emoji-panel" style="position:fixed;right:260px;bottom:86px;background:var(--panel);border:1px solid var(--border);padding:8px;border-radius:10px;display:none;max-width:320px;z-index:60;">
+      <!-- emoji grid populated by JS -->
+    </div>
+  </div>
+</div>
+
+<div id="profile-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:70;">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:380px;width:100%;color:var(--text);position:relative;">
+    <button id="profile-close" type="button" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">×</button>
+    <div style="font-size:1.45rem;font-weight:800;color:var(--accent);margin-bottom:8px;">Profile</div>
+    <div id="profile-name" style="font-size:1.1rem;font-weight:700;color:var(--white);"></div>
+    <div id="profile-status" style="color:var(--muted);font-size:0.94rem;margin:8px 0 16px;">Online VIBE user</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="profile-add" type="button" style="padding:10px 14px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#000;font-weight:700;cursor:pointer;">Add Contact</button>
+      <button id="profile-chat" type="button" style="padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text);font-weight:700;cursor:pointer;">Start Chat</button>
+    </div>
+    <div id="profile-message" style="color:var(--green);font-size:0.9rem;margin-top:12px;min-height:18px;"></div>
+  </div>
+</div>
+
+<div id="group-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);justify-content:center;align-items:center;z-index:75;">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:420px;width:100%;color:var(--text);position:relative;">
+    <button id="group-close" type="button" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">×</button>
+    <div style="font-size:1.35rem;font-weight:800;color:var(--accent);margin-bottom:10px;">Create Group</div>
+    <input id="group-name-input" type="text" placeholder="Group name" style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);color:var(--white);margin-bottom:14px;" />
+    <div style="font-size:0.92rem;color:var(--muted);margin-bottom:10px;">Pick members from online or offline contacts.</div>
+    <div id="group-members-list" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px;margin-bottom:14px;"></div>
+    <button id="group-save-btn" type="button" style="width:100%;padding:12px 14px;border-radius:10px;border:none;background:var(--accent);color:#000;font-size:0.95rem;font-weight:700;cursor:pointer;">Save group</button>
+    <div id="group-error" style="color:var(--red);font-size:0.88rem;margin-top:10px;min-height:18px;"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  const loginScreen   = document.getElementById('login-screen');
+  const appEl         = document.getElementById('app');
+  const usernameEl    = document.getElementById('username-input');
+  const emailEl       = document.getElementById('email-input');
+  const passwordEl    = document.getElementById('password-input');
+  const robotCheckEl  = document.getElementById('robot-check');
+  const codeInputEl   = document.getElementById('code-input');
+  const codeBtn       = document.getElementById('code-btn');
+  const codeStatusEl  = document.getElementById('code-status');
+  const connectBtn    = document.getElementById('connect-btn');
+  const loginError    = document.getElementById('login-error');
+  const messagesEl    = document.getElementById('messages');
+  const msgInput      = document.getElementById('msg-input');
+  const sendBtn       = document.getElementById('send-btn');
+  const userListEl    = document.getElementById('user-list');
+  const contactSearchEl = document.getElementById('contact-search');
+  const searchResultEl = document.getElementById('search-result');
+  const createGroupBtn = document.getElementById('create-group-btn');
+  const roomTitle     = document.getElementById('room-title');
+  const typingEl      = document.getElementById('typing-indicator');
+  const switchAuthBtn = document.getElementById('switch-auth');
+  const rememberedNameDiv = document.getElementById('remembered-name');
+  const formSubtitle  = document.getElementById('form-subtitle');
+  const profileOverlay = document.getElementById('profile-overlay');
+  const profileClose  = document.getElementById('profile-close');
+  const profileName   = document.getElementById('profile-name');
+  const profileStatus = document.getElementById('profile-status');
+  const profileAdd    = document.getElementById('profile-add');
+  const profileChat   = document.getElementById('profile-chat');
+  const profileMessage = document.getElementById('profile-message');
+  const groupOverlay = document.getElementById('group-overlay');
+  const groupClose = document.getElementById('group-close');
+  const groupNameInput = document.getElementById('group-name-input');
+  const groupMembersList = document.getElementById('group-members-list');
+  const groupSaveBtn = document.getElementById('group-save-btn');
+  const groupError = document.getElementById('group-error');
+  const groupListEl = document.getElementById('group-list');
+  const voiceBtn      = document.getElementById('voice-btn');
+  const voiceBar     = document.getElementById('voice-bar');
+  const muteBtn      = document.getElementById('mute-btn');
+  const voiceLbl     = document.getElementById('voice-users-label');
+  const videoBtn     = document.getElementById('video-btn');
+  const screenBtn    = document.getElementById('screen-btn');
+  const mediaContainer = document.getElementById('media-container');
+
+  let socket, myUsername = '', currentRoom = null;
+  let rooms = [], typingTimeout;
+  let verificationCode = '';
+  let codeSent = false;
+  let authMode = 'signup';
+  let account = null;
+  let contacts = [];
+  let pendingRequests = [];
+  let sentRequests = [];
+  let incomingRequests = [];
+  let groups = [];
+  let onlineUsers = [];
+  let lastSearchQuery = '';
+  let inVoice = false, isMuted = false, localStream = null;
+  let callType = null; // 'audio' | 'video' | 'screen' | null
+  const peers = {}, audioEls = {};
+  const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+  initAuth();
+
+  function initAuth() {
+    const stored = localStorage.getItem('vibe_account');
+    if (stored) {
+      account = JSON.parse(stored);
+      contacts = account.contacts || [];
+      pendingRequests = account.pending || [];
+      sentRequests = account.sentRequests || [];
+      incomingRequests = account.incomingRequests || [];
+      groups = account.groups || [];
+      authMode = 'login';
+      rememberedNameDiv.textContent = `Welcome back, ${account.username}`;
+      rememberedNameDiv.style.display = 'block';
+      formSubtitle.textContent = account.lastOnline && Date.now() - account.lastOnline > 12096e5
+        ? 'You have been away for 2 weeks or more. Login to return to your VIBE.'
+        : 'Login to your VIBE account';
+      connectBtn.textContent = 'Login';
+      switchAuthBtn.textContent = 'Signup';
+      usernameEl.style.display = 'none';
+      robotCheckEl.closest('div').style.display = 'none';
+      codeInputEl.closest('div').style.display = 'none';
+      codeStatusEl.style.display = 'none';
+    }
+  }
+
+  function saveAccount() {
+    if (!account) return;
+    account.contacts = contacts;
+    account.pending = pendingRequests;
+    account.sentRequests = sentRequests;
+    account.incomingRequests = incomingRequests;
+    account.groups = groups;
+    account.lastOnline = Date.now();
+    localStorage.setItem('vibe_account', JSON.stringify(account));
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    if (mode === 'login') {
+      formSubtitle.textContent = 'Login to your VIBE account';
+      connectBtn.textContent = 'Login';
+      switchAuthBtn.textContent = 'Signup';
+      usernameEl.style.display = 'none';
+      robotCheckEl.closest('div').style.display = 'none';
+      codeInputEl.closest('div').style.display = 'none';
+      codeStatusEl.style.display = 'none';
+      rememberedNameDiv.style.display = account ? 'block' : 'none';
+      if (account) rememberedNameDiv.textContent = `Welcome back, ${account.username}`;
+    } else {
+      formSubtitle.textContent = 'Sign up to your vibe space';
+      connectBtn.textContent = 'Sign Up';
+      switchAuthBtn.textContent = 'Login';
+      usernameEl.style.display = 'block';
+      robotCheckEl.closest('div').style.display = 'flex';
+      codeInputEl.closest('div').style.display = 'flex';
+      codeStatusEl.style.display = 'block';
+      rememberedNameDiv.style.display = 'none';
+    }
+  }
+
+  function openProfile(username) {
+    profileName.textContent = username;
+    profileStatus.textContent = `Available on VIBE`;
+    profileMessage.textContent = '';
+    profileOverlay.style.display = 'flex';
+    profileAdd.disabled = contacts.includes(username) || username === myUsername;
+    profileAdd.textContent = contacts.includes(username) ? 'Added' : 'Add Contact';
+    profileChat.disabled = username === myUsername;
+    profileChat.textContent = username === myUsername ? 'This is you' : 'Start Chat';
+    profileAdd.onclick = () => {
+      if (username === myUsername) return;
+      socket.emit('contact-request', { to: username, from: myUsername });
+      profileMessage.textContent = `Contact request sent to ${username}`;
+    };
+    profileChat.onclick = () => {
+      if (username === myUsername) return;
+      startDM(username);
+      profileOverlay.style.display = 'none';
+    };
+  }
+
+  function formatRoomTitle(room) {
+    const parts = room.split('-').slice(1);
+    const other = parts.find(part => part !== myUsername) || parts[0] || 'VIBE';
+    return other.replace(/-/g, ' ');
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function appendMsg(msg) {
+    const div = document.createElement('div');
+    if (msg.user === 'System') {
+      div.className = 'msg system';
+      div.innerHTML = `<div class="msg-bubble">${esc(msg.text)}</div>`;
+    } else {
+      const isMe = msg.user === myUsername;
+      div.className = 'msg ' + (isMe ? 'me' : 'other');
+      const time = new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      div.innerHTML = `<div class="msg-meta">${isMe ? time : esc(msg.user) + ' &bull; ' + time}</div><div class="msg-bubble">${esc(msg.text)}</div>`;
+    }
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function renderRooms() {
+    roomTitle.textContent = currentRoom
+      ? `VIBE / ${formatRoomTitle(currentRoom)}`
+      : 'Pick a contact to start your vibe';
+    renderGroupList();
+  }
+
+  function renderGroupList() {
+    groupListEl.innerHTML = '';
+    if (!groups.length) {
+      groupListEl.innerHTML = '<div style="font-size:0.88rem;color:var(--muted);">No groups yet. Create one and it will appear here.</div>';
+      return;
+    }
+    groups.forEach(g => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'room-item';
+      btn.textContent = g.name;
+      btn.onclick = () => startGroup(g.id, g.name);
+      groupListEl.appendChild(btn);
+    });
+  }
+
+  function switchRoom(room) {
+    if (room === currentRoom) return;
+    currentRoom = room;
+    messagesEl.innerHTML = '';
+    msgInput.disabled = false;
+    sendBtn.disabled = false;
+    roomTitle.textContent = `VIBE / ${formatRoomTitle(room)}`;
+    socket.emit('join', { username: myUsername, room });
+  }
+
+  // Connect
+  connectBtn.addEventListener('click', doConnect);
+  usernameEl.addEventListener('keydown', e => { if (e.key === 'Enter') doConnect(); });
+  emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') doConnect(); });
+  passwordEl.addEventListener('keydown', e => { if (e.key === 'Enter') doConnect(); });
+  codeBtn.addEventListener('click', sendVerificationCode);
+  switchAuthBtn.addEventListener('click', () => setAuthMode(authMode === 'signup' ? 'login' : 'signup'));
+  contactSearchEl.addEventListener('input', onContactSearch);
+  contactSearchEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      performContactSearch();
+    }
+  });
+  createGroupBtn.addEventListener('click', openGroupOverlay);
+  groupClose.addEventListener('click', () => { groupOverlay.style.display = 'none'; groupError.textContent = ''; });
+  groupSaveBtn.addEventListener('click', saveGroup);
+  profileClose.addEventListener('click', () => { profileOverlay.style.display = 'none'; });
+
+  function sendVerificationCode() {
+    const email = emailEl.value.trim();
+    if (!email) {
+      codeStatusEl.textContent = 'Enter a valid email first.';
+      emailEl.focus();
+      return;
+    }
+    verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+    codeSent = true;
+    codeStatusEl.textContent = `VIBE code sent to ${email}. Use ${verificationCode}`;
+  }
+
+  function onContactSearch() {
+    const query = contactSearchEl.value.trim();
+    lastSearchQuery = query;
+    if (!socket) return;
+    if (!query) {
+      clearSearchResult();
+      return;
+    }
+    socket.emit('search-users', query);
+  }
+
+  function performContactSearch() {
+    const query = contactSearchEl.value.trim();
+    lastSearchQuery = query;
+    if (!socket || !query) {
+      clearSearchResult();
+      return;
+    }
+    socket.emit('search-users', query);
+  }
+
+  function clearSearchResult() {
+    searchResultEl.innerHTML = '<span style="color:var(--muted);font-size:0.92rem;">Search a contact and press Enter to show request actions here.</span>';
+  }
+
+  function openGroupOverlay() {
+    if (!contacts.length && !onlineUsers.length) {
+      alert('You need at least one contact or online person before creating a group.');
+      return;
+    }
+    groupOverlay.style.display = 'flex';
+    groupNameInput.value = '';
+    groupError.textContent = '';
+    renderGroupModalMembers();
+  }
+
+  function renderGroupModalMembers() {
+    if (!groupMembersList) return;
+    groupMembersList.innerHTML = '';
+    const memberNames = [...new Set([...contacts, ...onlineUsers])].filter(name => name && name !== myUsername);
+    if (!memberNames.length) {
+      groupMembersList.innerHTML = '<div style="color:var(--muted);font-size:0.92rem;">No contacts or online people available to add.</div>';
+      return;
+    }
+    memberNames.sort((a,b) => a.localeCompare(b));
+    memberNames.forEach(name => {
+      const row = document.createElement('label');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '10px';
+      row.style.padding = '10px 12px';
+      row.style.borderRadius = '10px';
+      row.style.border = '1px solid var(--border)';
+      row.style.background = onlineUsers.includes(name) ? 'rgba(0,170,255,0.08)' : 'rgba(255,255,255,0.04)';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = name;
+      checkbox.style.width = '18px';
+      checkbox.style.height = '18px';
+      const info = document.createElement('div');
+      info.style.display = 'flex';
+      info.style.flexDirection = 'column';
+      info.style.fontSize = '0.92rem';
+      info.innerHTML = `<span>${esc(name)}</span><span style="color:var(--muted);font-size:0.8rem;">${onlineUsers.includes(name) ? 'Online' : 'Offline contact'}</span>`;
+      row.appendChild(checkbox);
+      row.appendChild(info);
+      groupMembersList.appendChild(row);
+    });
+  }
+
+  function saveGroup() {
+    const chosen = [...groupMembersList.querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
+    const groupName = groupNameInput.value.trim();
+    if (!groupName) {
+      groupError.textContent = 'Enter a group name.';
+      return;
+    }
+    if (!chosen.length) {
+      groupError.textContent = 'Pick at least one person for the group.';
+      return;
+    }
+    const roomId = `group-${groupName.replace(/\s+/g,'-').toLowerCase()}-${Date.now()}`;
+    const group = { id: roomId, name: groupName, members: [myUsername, ...chosen] };
+    groups.push(group);
+    saveAccount();
+    renderGroupList();
+    groupOverlay.style.display = 'none';
+    groupError.textContent = '';
+    socket.emit('group-create', { room: roomId, groupName, members: group.members });
+    startGroup(roomId, groupName);
+  }
+
+  function startGroup(room, groupName) {
+    currentRoom = room;
+    msgInput.disabled = false;
+    sendBtn.disabled = false;
+    roomTitle.textContent = `Group: ${groupName}`;
+    socket.emit('join', { username: myUsername, room });
+  }
+
+  function doConnect() {
+    const username = usernameEl.value.trim();
+    const email = emailEl.value.trim();
+    const password = passwordEl.value;
+    const code = codeInputEl.value.trim();
+
+    if (authMode === 'signup') {
+      if (!username) {
+        loginError.textContent = 'Enter your display name.';
+        usernameEl.focus();
+        return;
+      }
+      if (!email) {
+        loginError.textContent = 'Enter your email.';
+        emailEl.focus();
+        return;
+      }
+      if (!password) {
+        loginError.textContent = 'Create a password.';
+        passwordEl.focus();
+        return;
+      }
+      if (!robotCheckEl.checked) {
+        loginError.textContent = 'Confirm that you are not a robot.';
+        return;
+      }
+      if (!codeSent) {
+        loginError.textContent = 'Send the verification code first.';
+        return;
+      }
+      if (code !== verificationCode) {
+        loginError.textContent = 'Verification code is incorrect.';
+        codeInputEl.focus();
+        return;
+      }
+      account = { username, email, password, contacts: [], pending: [], lastOnline: Date.now() };
+      contacts = [];
+      pendingRequests = [];
+      saveAccount();
+    } else {
+      if (!account) {
+        loginError.textContent = 'No VIBE account found. Please sign up.';
+        return;
+      }
+      if (!email) {
+        loginError.textContent = 'Enter your email.';
+        emailEl.focus();
+        return;
+      }
+      if (email !== account.email) {
+        loginError.textContent = 'Email does not match your VIBE account.';
+        emailEl.focus();
+        return;
+      }
+      if (!password) {
+        loginError.textContent = 'Enter your password.';
+        passwordEl.focus();
+        return;
+      }
+      if (password !== account.password) {
+        loginError.textContent = 'Password is incorrect.';
+        passwordEl.focus();
+        return;
+      }
+      usernameEl.value = account.username;
+      myUsername = account.username;
+      saveAccount();
+    }
+
+    loginError.textContent = '';
+    connectBtn.textContent = authMode === 'signup' ? 'Signing up...' : 'Logging in...';
+    connectBtn.disabled = true;
+
+    socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+      myUsername = account.username;
+      currentRoom = null;
+      loginScreen.style.display = 'none';
+      appEl.style.display = 'flex';
+      msgInput.disabled = true;
+      sendBtn.disabled = true;
+      renderRooms();
+      socket.emit('join', { username: myUsername, room: 'vibe-lobby' });
+      setupVoice();
+      msgInput.focus();
+    });
+
+    socket.on('connect_error', () => {
+      loginError.textContent = 'Could not connect. Is the server running?';
+      connectBtn.textContent = authMode === 'signup' ? 'Sign Up' : 'Login';
+      connectBtn.disabled = false;
+    });
+
+    socket.on('history', msgs => {
+      messagesEl.innerHTML = '';
+      if (currentRoom && currentRoom !== 'vibe-lobby') msgs.forEach(appendMsg);
+    });
+    socket.on('message', appendMsg);
+
+    socket.on('users', users => {
+      onlineUsers = users.filter(u => u !== myUsername);
+      userListEl.innerHTML = '';
+      users.forEach(u => {
+        const d = document.createElement('div');
+        d.className = 'user-chip';
+        d.innerHTML = `<div class="online-dot"></div>${esc(u)}`;
+        d.style.cursor = (u === myUsername) ? 'default' : 'pointer';
+        d.title = (u === myUsername) ? 'You' : 'Click to DM';
+        d.onclick = () => { if (u !== myUsername) openProfile(u); };
+        userListEl.appendChild(d);
+      });
+      renderGroupModalMembers();
+    });
+
+    socket.on('search-results', updateSearchResults);
+    socket.on('contact-request', ({ from }) => {
+      if (!incomingRequests.includes(from)) incomingRequests.push(from);
+      saveAccount();
+      if (contactSearchEl.value.trim().toLowerCase() === from.toLowerCase()) {
+        performContactSearch();
+      }
+      alert(`${from} wants to add you on VIBE. Press Enter on their name again to accept.`);
+    });
+    socket.on('contact-accepted', ({ from }) => {
+      if (!contacts.includes(from)) contacts.push(from);
+      sentRequests = sentRequests.filter(name => name !== from);
+      saveAccount();
+      if (contactSearchEl.value.trim().toLowerCase() === from.toLowerCase()) {
+        performContactSearch();
+      }
+      alert(`${from} accepted your contact request.`);
+    });
+    socket.on('group-created', ({ room, groupName }) => {
+      if (room !== currentRoom) {
+        currentRoom = room;
+        roomTitle.textContent = `Group: ${groupName}`;
+      }
+    });
+    socket.on('typing', ({ user, isTyping }) => {
+      typingEl.textContent = isTyping ? `${user} is typing...` : '';
+    });
+  }
+
+  function updateSearchResults(results) {
+    const query = contactSearchEl.value.trim();
+    lastSearchQuery = query;
+    searchResultEl.innerHTML = '';
+    if (!query) {
+      clearSearchResult();
+      return;
+    }
+    if (!results.length) {
+      searchResultEl.innerHTML = `<div style="font-size:0.92rem;color:var(--muted);">No online users found for “${esc(query)}”.</div>`;
+      return;
+    }
+    const r = results[0];
+    const username = r.username;
+    const card = document.createElement('div');
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.gap = '10px';
+    card.style.width = '100%';
+
+    const title = document.createElement('div');
+    title.style.fontWeight = '700';
+    title.style.color = 'var(--white)';
+    title.textContent = username;
+
+    const info = document.createElement('div');
+    info.style.fontSize = '0.9rem';
+    info.style.color = 'var(--muted)';
+    info.textContent = `Search result for “${esc(query)}”.`;
+
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.style.padding = '10px 14px';
+    action.style.borderRadius = '9px';
+    action.style.border = 'none';
+    action.style.cursor = 'pointer';
+    action.style.fontWeight = '700';
+    action.style.background = 'var(--accent)';
+    action.style.color = '#000';
+    action.style.alignSelf = 'flex-start';
+
+    if (username === myUsername) {
+      action.textContent = 'This is you';
+      action.disabled = true;
+      action.style.background = 'var(--border)';
+      action.style.cursor = 'default';
+    } else if (contacts.includes(username)) {
+      action.textContent = 'Already a contact';
+      action.disabled = true;
+      action.style.background = 'var(--border)';
+      action.style.cursor = 'default';
+    } else if (incomingRequests.includes(username)) {
+      action.textContent = 'Accept this contact';
+      action.onclick = () => acceptIncomingRequest(username);
+    } else if (sentRequests.includes(username)) {
+      action.textContent = 'Contact request sent';
+      action.disabled = true;
+      action.style.background = 'rgba(0,170,255,0.25)';
+      action.style.color = 'var(--white)';
+    } else {
+      action.textContent = 'Send contact request';
+      action.onclick = () => sendContactRequest(username);
+    }
+
+    card.appendChild(title);
+    card.appendChild(info);
+    card.appendChild(action);
+    searchResultEl.appendChild(card);
+  }
+
+  function sendContactRequest(username) {
+    if (!socket) return;
+    socket.emit('contact-request', { to: username, from: myUsername });
+    if (!sentRequests.includes(username)) sentRequests.push(username);
+    saveAccount();
+    setTimeout(() => { if (contactSearchEl.value.trim().toLowerCase() === username.toLowerCase()) performContactSearch(); }, 100);
+  }
+
+  function acceptIncomingRequest(username) {
+    if (!socket) return;
+    if (!contacts.includes(username)) contacts.push(username);
+    incomingRequests = incomingRequests.filter(name => name !== username);
+    saveAccount();
+    socket.emit('contact-accept', { to: username, from: myUsername });
+    alert(`${username} is now your contact.`);
+    setTimeout(() => { if (contactSearchEl.value.trim().toLowerCase() === username.toLowerCase()) performContactSearch(); }, 100);
+  }
+
+  // Messages
+  sendBtn.addEventListener('click', sendMessage);
+  msgInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  msgInput.addEventListener('input', () => {
+    if (!socket) return;
+    socket.emit('typing', true);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => socket.emit('typing', false), 1500);
+  });
+
+  function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text || !socket) return;
+    socket.emit('message', { text });
+    msgInput.value = '';
+    socket.emit('typing', false);
+  }
+
+  // Voice (WebRTC)
+  function setupVoice() {
+    socket.on('voice-existing-users', async users => {
+      for (const { socketId } of users) await createPeer(socketId, true);
+    });
+    socket.on('voice-user-joined', async ({ socketId }) => {
+      if (!inVoice) return;
+      await createPeer(socketId, false);
+    });
+    socket.on('voice-offer', async ({ from, offer }) => {
+      if (!inVoice) return;
+      let pc = peers[from] || await createPeer(from, false);
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('voice-answer', { to: from, answer });
+    });
+    socket.on('voice-answer', async ({ from, answer }) => {
+      if (peers[from]) await peers[from].setRemoteDescription(new RTCSessionDescription(answer));
+    });
+    socket.on('voice-ice', async ({ from, candidate }) => {
+      try { if (peers[from]) await peers[from].addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
+    });
+    socket.on('voice-user-left', ({ socketId }) => closePeer(socketId));
+    socket.on('voice-users', users => { voiceLbl.textContent = users.join(', '); });
+  }
+
+  async function startCall(type) {
+    if (!socket) return;
+    try {
+      let stream = null;
+      if (type === 'audio') {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } else if (type === 'video') {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      } else if (type === 'screen') {
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        } catch (e) {
+          // Some browsers don't provide audio with getDisplayMedia; try to combine
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          try {
+            const audioOnly = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioOnly.getAudioTracks().forEach(t => stream.addTrack(t));
+          } catch (err) {
+            // proceed without audio
+          }
+        }
+      }
+      if (!stream) throw new Error('Could not obtain media');
+      localStream = stream;
+      inVoice = true;
+      callType = type;
+      // update UI
+      voiceBar.classList.add('visible');
+      voiceBtn.classList.toggle('active', type === 'audio');
+      videoBtn.classList.toggle('active', type === 'video');
+      screenBtn.classList.toggle('active', type === 'screen');
+      voiceBtn.textContent = (type === 'audio' && !isMuted) ? 'Mic On' : (type === 'audio' && isMuted) ? 'Muted' : 'Mic Off';
+      videoBtn.textContent = type === 'video' ? 'Video On' : 'Video Off';
+      screenBtn.textContent = type === 'screen' ? 'Stop Share' : 'Share Screen';
+      socket.emit('voice-join');
+    } catch (err) {
+      alert('Media error: ' + (err && err.message ? err.message : err));
+    }
+  }
+
+  async function toggleCall(type) {
+    if (!inVoice) return startCall(type);
+    if (callType === type) return leaveVoice();
+    // switch type
+    leaveVoice();
+    await new Promise(r => setTimeout(r, 200));
+    return startCall(type);
+  }
+
+  voiceBtn.addEventListener('click', () => toggleCall('audio'));
+  videoBtn.addEventListener('click', () => toggleCall('video'));
+  screenBtn.addEventListener('click', () => toggleCall('screen'));
+
+  muteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    muteBtn.classList.toggle('muted', isMuted);
+    voiceBtn.classList.toggle('muted', isMuted);
+    voiceBtn.textContent = isMuted ? 'Muted' : 'Mic On';
+  });
+
+  function leaveVoice() {
+    inVoice = false; isMuted = false;
+    voiceBtn.textContent = 'Mic Off';
+    videoBtn.textContent = 'Video Off';
+    screenBtn.textContent = 'Share Screen';
+    voiceBtn.classList.remove('active', 'muted');
+    videoBtn.classList.remove('active');
+    screenBtn.classList.remove('active');
+    voiceBar.classList.remove('visible');
+    muteBtn.textContent = 'Mute';
+    muteBtn.classList.remove('muted');
+    Object.keys(peers).forEach(closePeer);
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    callType = null;
+    // clear remote media
+    if (mediaContainer) mediaContainer.innerHTML = '';
+    socket.emit('voice-leave');
+  }
+
+  async function createPeer(socketId, initiator) {
+    const pc = new RTCPeerConnection(ICE);
+    peers[socketId] = pc;
+    if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    pc.onicecandidate = e => { if (e.candidate) socket.emit('voice-ice', { to: socketId, candidate: e.candidate }); };
+    pc.ontrack = e => {
+      const stream = e.streams[0];
+      if (!stream) return;
+      const hasVideo = stream.getVideoTracks().length > 0;
+      if (!audioEls[socketId]) {
+        const el = hasVideo ? document.createElement('video') : document.createElement('audio');
+        el.autoplay = true;
+        el.playsInline = true;
+        if (hasVideo) {
+          el.width = 200;
+          el.height = 140;
+          el.style.borderRadius = '8px';
+        }
+        if (mediaContainer) mediaContainer.appendChild(el); else document.body.appendChild(el);
+        audioEls[socketId] = el;
+      }
+      audioEls[socketId].srcObject = stream;
+    };
+    if (initiator) {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit('voice-offer', { to: socketId, offer });
+    }
+    return pc;
+  }
+
+  function closePeer(socketId) {
+    if (peers[socketId])   { peers[socketId].close(); delete peers[socketId]; }
+    if (audioEls[socketId]) { audioEls[socketId].remove(); delete audioEls[socketId]; }
+  }
+
+  // --- Direct Message helper ---
+  function startDM(targetUser) {
+    if (!myUsername) return alert('Sign in first');
+    const users = [myUsername, targetUser].sort();
+    const dmName = `dm-${users.join('-')}`;
+    if (!rooms.includes(dmName)) rooms.push(dmName);
+    roomTitle.textContent = `VIBE / ${targetUser}`;
+    msgInput.disabled = false;
+    sendBtn.disabled = false;
+    switchRoom(dmName);
+  }
+
+  function formatRoomTitle(room) {
+    const parts = room.split('-').slice(1);
+    const other = parts.find(part => part !== myUsername) || parts[0] || 'VIBE';
+    return other.replace(/-/g, ' ');
+  }
+
+  // --- Emoji picker ---
+  const emojiBtn = document.getElementById('emoji-btn');
+  const emojiPanel = document.getElementById('emoji-panel');
+  const EMOJIS = ['😀','😁','😂','🤣','😊','😍','😘','😎','🤩','😴','🤔','👍','👎','🙏','🔥','✨','💯','🎉','❤️','😅','🤣','🤝','🎧','📞','📷'];
+  function populateEmojiPanel() {
+    emojiPanel.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexWrap = 'wrap';
+    wrap.style.gap = '6px';
+    EMOJIS.forEach(e => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = e;
+      b.style.padding = '6px';
+      b.style.fontSize = '18px';
+      b.style.border = 'none';
+      b.style.background = 'transparent';
+      b.style.cursor = 'pointer';
+      b.onclick = () => {
+        insertAtCursor(msgInput, e);
+        msgInput.focus();
+      };
+      wrap.appendChild(b);
+    });
+    emojiPanel.appendChild(wrap);
+  }
+  function insertAtCursor(el, text) {
+    const start = el.selectionStart || 0;
+    const end = el.selectionEnd || 0;
+    const val = el.value;
+    el.value = val.slice(0, start) + text + val.slice(end);
+    const pos = start + text.length;
+    el.setSelectionRange(pos, pos);
+    el.dispatchEvent(new Event('input'));
+  }
+  emojiBtn && emojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (emojiPanel.style.display === 'none' || !emojiPanel.style.display) {
+      populateEmojiPanel();
+      emojiPanel.style.display = 'block';
+    } else {
+      emojiPanel.style.display = 'none';
+    }
+  });
+  // hide panel when clicking elsewhere
+  document.addEventListener('click', (ev) => { if (emojiPanel) emojiPanel.style.display = 'none'; });
+
+  // --- Background customization ---
+  const bgColorEl = document.getElementById('bg-color');
+  const bgImageEl = document.getElementById('bg-image');
+  const bgResetBtn = document.getElementById('bg-reset');
+  const BG_KEY = 'chat_bg';
+
+  function applyBackground(cfg) {
+    if (!cfg) cfg = {};
+    if (cfg.image) {
+      document.body.style.backgroundImage = `url(${cfg.image})`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundPosition = 'center';
+    } else {
+      document.body.style.backgroundImage = '';
+    }
+    document.body.style.backgroundColor = cfg.color || '';
+  }
+
+  function loadBackground() {
+    try {
+      const raw = localStorage.getItem(BG_KEY);
+      if (!raw) return;
+      const cfg = JSON.parse(raw);
+      if (bgColorEl && cfg.color) bgColorEl.value = cfg.color;
+      applyBackground(cfg);
+    } catch (e) {}
+  }
+
+  if (bgColorEl) bgColorEl.addEventListener('input', () => {
+    const cfg = JSON.parse(localStorage.getItem(BG_KEY) || '{}');
+    cfg.color = bgColorEl.value;
+    localStorage.setItem(BG_KEY, JSON.stringify(cfg));
+    applyBackground(cfg);
+  });
+  if (bgImageEl) bgImageEl.addEventListener('change', (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      const cfg = JSON.parse(localStorage.getItem(BG_KEY) || '{}');
+      cfg.image = fr.result;
+      localStorage.setItem(BG_KEY, JSON.stringify(cfg));
+      applyBackground(cfg);
+    };
+    fr.readAsDataURL(f);
+  });
+  if (bgResetBtn) bgResetBtn.addEventListener('click', () => {
+    localStorage.removeItem(BG_KEY);
+    if (bgColorEl) bgColorEl.value = '#0a0e1a';
+    applyBackground({ color: '#0a0e1a' });
+  });
+  loadBackground();
+
+});
+</script>
+</body>
+</html>
