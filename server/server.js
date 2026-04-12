@@ -61,6 +61,28 @@ io.on('connection', (socket) => {
     if (target) target.emit('contact-accepted', { from });
   });
 
+  socket.on('call-request', ({ from, to, roomId }) => {
+    if (Array.isArray(to)) {
+      to.forEach(username => {
+        const target = findSocket(username);
+        if (target) target.emit('call-request', { from, roomId });
+      });
+    } else {
+      const target = findSocket(to);
+      if (target) target.emit('call-request', { from, roomId });
+    }
+  });
+
+  socket.on('call-accept', ({ to, from, roomId }) => {
+    const target = findSocket(to);
+    if (target) target.emit('call-accepted', { from, roomId });
+  });
+
+  socket.on('call-decline', ({ to, from, roomId }) => {
+    const target = findSocket(to);
+    if (target) target.emit('call-declined', { from, roomId });
+  });
+
   socket.on('group-create', ({ room, groupName, members }) => {
     if (!room) return;
     socket.join(room);
