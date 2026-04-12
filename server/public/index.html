@@ -461,6 +461,18 @@
     color: #007bff;
   }
 
+  .chat-action-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  .chat-action-btn.muted {
+    background: #ff445522;
+    border-color: #ff445544;
+    color: #ff4455;
+  }
+
   #voice-btn:hover,
   #video-btn:hover,
   #screen-btn:hover,
@@ -500,16 +512,32 @@
 
   #typing-indicator-bubble {
     display: none;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #252837;
-    border-radius: 12px;
-    border-bottom-left-radius: 4px;
+    flex-direction: column;
+    gap: 6px;
     margin-bottom: 12px;
     align-self: flex-start;
-    font-size: 0.85rem;
+  }
+
+  .typing-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  .typing-bubble {
+    padding: 10px 16px;
+    background: #252837;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #typing-text {
+    font-size: 0.75rem;
     color: var(--muted);
+    margin-left: 44px; /* match avatar width + gap */
   }
 
   .typing-dots {
@@ -719,7 +747,7 @@
     <div class="sidebar-logo">Vibe<span class="dot-p">&bull;</span><span class="dot-g">&bull;</span></div>
 
     <div class="search-wrapper">
-      <span class="search-icon">🔍</span>
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <input id="contact-search" type="search" placeholder="Search conversations..." />
     </div>
     <div id="search-result" style="display:none;">
@@ -749,16 +777,26 @@
         </div>
       </div>
       <div class="chat-actions">
-        <button id="voice-btn" class="chat-action-btn">📞</button>
-        <button id="video-btn" class="chat-action-btn">📹</button>
-        <button id="screen-btn" class="chat-action-btn">🖥️</button>
-        <button id="info-btn" class="chat-action-btn info">ℹ️</button>
+        <button id="voice-btn" class="chat-action-btn" title="Toggle Mic">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.28-2.28a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        </button>
+        <button id="screen-btn" class="chat-action-btn" title="Share Screen">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </button>
+        <button id="info-btn" class="chat-action-btn info" title="Chat Info">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
       </div>
     </div>
     <div id="messages"></div>
     <div id="typing-indicator-bubble">
-      <div class="typing-dots">
-        <span></span><span></span><span></span>
+      <div class="typing-row">
+        <div id="typing-avatar" class="msg-avatar"></div>
+        <div class="typing-bubble">
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
       </div>
       <span id="typing-text">Jamie is typing...</span>
     </div>
@@ -766,10 +804,14 @@
       <div class="vc-pulse"></div>
       <span>Voice &bull; </span><span id="voice-users-label"></span>
       <div id="media-container" style="display:flex;gap:8px;margin-left:12px;align-items:center;"></div>
-      <button id="mute-btn">Mute</button>
+      <button id="mute-btn" class="chat-action-btn" title="Mute/Unmute">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </button>
     </div>
     <div id="input-row">
-      <button id="emoji-btn" title="Emoji" style="padding:10px; border-radius:10px; border:1px solid var(--border); background:#252837; color:var(--muted); cursor:pointer; font-size:1.2rem;">😊</button>
+      <button id="emoji-btn" class="chat-action-btn" title="Emoji">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+      </button>
       <input id="msg-input" type="text" placeholder="Type a message..." maxlength="2000" />
       <button id="send-btn">Send</button>
     </div>
@@ -781,10 +823,18 @@
   <div id="screen-share-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:80;flex-direction:column;justify-content:center;align-items:center;gap:20px;">
     <div id="screen-share-container" style="width:90%;height:80%;border-radius:12px;overflow:hidden;background:#000;"></div>
     <div style="display:flex;gap:12px;justify-content:center;">
-      <button id="ss-stop-btn" type="button" style="padding:12px 20px;border-radius:8px;border:none;background:#ff4455;color:#fff;font-weight:700;cursor:pointer;">Stop Share</button>
-      <button id="ss-video-btn" type="button" style="padding:12px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;">Video Off</button>
-      <button id="ss-leave-btn" type="button" style="padding:12px 20px;border-radius:8px;border:1.5px solid #ff4455;background:transparent;color:#ff4455;font-weight:700;cursor:pointer;">Leave Call</button>
-      <button id="ss-mute-btn" type="button" style="padding:12px 20px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-weight:700;cursor:pointer;">Mute</button>
+      <button id="ss-stop-btn" class="chat-action-btn muted" title="Stop Share">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><line x1="2" y1="3" x2="22" y2="17" stroke="red"></line></svg>
+      </button>
+      <button id="ss-video-btn" class="chat-action-btn" title="Toggle Video">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+      </button>
+      <button id="ss-leave-btn" class="chat-action-btn muted" title="Leave Call">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+      </button>
+      <button id="ss-mute-btn" class="chat-action-btn" title="Mute/Unmute">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -871,6 +921,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const ssMuteBtn = document.getElementById('ss-mute-btn');
   const typingBubble = document.getElementById('typing-indicator-bubble');
   const typingText = document.getElementById('typing-text');
+  const typingAvatar = document.getElementById('typing-avatar');
 
   let socket, myUsername = '', currentRoom = null;
   let rooms = [], typingTimeout;
@@ -1398,6 +1449,10 @@ document.addEventListener('DOMContentLoaded', function () {
     socket.on('typing', ({ user, isTyping }) => {
       if (isTyping && user !== myUsername) {
         typingText.textContent = `${user} is typing...`;
+        if (typingAvatar) {
+          typingAvatar.textContent = getInitials(user);
+          typingAvatar.style.cssText = avatarStyle(user);
+        }
         typingBubble.style.display = 'flex';
         messagesEl.scrollTop = messagesEl.scrollHeight;
       } else {
@@ -1584,8 +1639,8 @@ document.addEventListener('DOMContentLoaded', function () {
         selfVideo.srcObject = stream;
         screenShareContainer.innerHTML = '';
         screenShareContainer.appendChild(selfVideo);
-        ssVideoBtn.textContent = 'Video Off';
-        ssMuteBtn.textContent = 'Mute';
+        ssVideoBtn.title = 'Video Off';
+        ssMuteBtn.title = 'Mute';
       } else {
         voiceBar.classList.add('visible');
         screenSharePanel.style.display = 'none';
@@ -1593,9 +1648,6 @@ document.addEventListener('DOMContentLoaded', function () {
       voiceBtn.classList.toggle('active', type === 'audio');
       videoBtn.classList.toggle('active', type === 'video');
       screenBtn.classList.toggle('active', type === 'screen');
-      voiceBtn.textContent = (type === 'audio' && !isMuted) ? 'Mic On' : (type === 'audio' && isMuted) ? 'Muted' : 'Mic Off';
-      videoBtn.textContent = type === 'video' ? 'Video On' : 'Video Off';
-      screenBtn.textContent = type === 'screen' ? 'Stop Share' : 'Share Screen';
       socket.emit('voice-join');
     } catch (err) {
       alert('Media error: ' + (err && err.message ? err.message : err));
@@ -1621,29 +1673,29 @@ document.addEventListener('DOMContentLoaded', function () {
   ssMuteBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-    ssMuteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
-    muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    ssMuteBtn.title = isMuted ? 'Unmute' : 'Mute';
+    muteBtn.title = isMuted ? 'Unmute' : 'Mute';
+    ssMuteBtn.classList.toggle('muted', isMuted);
+    muteBtn.classList.toggle('muted', isMuted);
+    voiceBtn.classList.toggle('muted', isMuted);
   });
 
   muteBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-    muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    muteBtn.title = isMuted ? 'Unmute' : 'Mute';
+    ssMuteBtn.title = isMuted ? 'Unmute' : 'Mute';
     muteBtn.classList.toggle('muted', isMuted);
+    ssMuteBtn.classList.toggle('muted', isMuted);
     voiceBtn.classList.toggle('muted', isMuted);
-    voiceBtn.textContent = isMuted ? 'Muted' : 'Mic On';
   });
 
   function leaveVoice() {
     inVoice = false; isMuted = false;
-    voiceBtn.textContent = 'Mic Off';
-    videoBtn.textContent = 'Video Off';
-    screenBtn.textContent = 'Share Screen';
     voiceBtn.classList.remove('active', 'muted');
     videoBtn.classList.remove('active');
     screenBtn.classList.remove('active');
     voiceBar.classList.remove('visible');
-    muteBtn.textContent = 'Mute';
     muteBtn.classList.remove('muted');
     screenSharePanel.style.display = 'none';
     screenShareContainer.innerHTML = '';
