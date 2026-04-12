@@ -26,7 +26,7 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
-    height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -38,7 +38,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    height: 100dvh;
     gap: 14px;
     background: var(--bg);
   }
@@ -199,7 +199,7 @@
   /* Screenshot-inspired refresh */
   #app {
     display: none;
-    height: 100vh;
+    height: 100dvh;
     flex-direction: row;
     background: var(--bg);
     overflow: hidden;
@@ -706,13 +706,13 @@
 
   @media (max-width: 900px) {
     #app {
-      height: 100vh;
+      height: 100dvh;
       margin: 0;
       border-radius: 0;
     }
 
     #sidebar {
-      width: 280px;
+      width: 260px;
       padding: 18px 12px 14px;
     }
 
@@ -739,6 +739,42 @@
     .msg {
       max-width: 90%;
     }
+
+    #back-btn {
+      display: flex;
+      margin-right: 8px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    #sidebar {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      width: 100%;
+      display: flex;
+    }
+
+    #sidebar.hidden {
+      display: none;
+    }
+
+    #chat-area {
+      width: 100%;
+    }
+  }
+
+  #back-btn {
+    display: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #252837;
+    color: #d5dcf2;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
   }
 
   /* ── CALL OVERLAY ── */
@@ -1010,6 +1046,9 @@
   <div id="chat-area">
     <div id="chat-header">
       <div class="chat-person">
+        <button id="back-btn" title="Back to Chats">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </button>
         <div id="header-avatar" class="header-avatar">JC</div>
         <div class="chat-person-copy">
           <h2 id="room-title">Jamie Chen</h2>
@@ -1144,6 +1183,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const loginScreen   = document.getElementById('login-screen');
   const appEl         = document.getElementById('app');
+  const sidebarEl     = document.getElementById('sidebar');
+  const backBtn       = document.getElementById('back-btn');
   const usernameEl    = document.getElementById('username-input');
   const emailEl       = document.getElementById('email-input');
   const passwordEl    = document.getElementById('password-input');
@@ -1503,16 +1544,29 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  function showSidebar(show) {
+    if (show) {
+      sidebarEl.classList.remove('hidden');
+    } else {
+      sidebarEl.classList.add('hidden');
+    }
+  }
+
   function switchRoom(room) {
-    if (room === currentRoom) return;
+    if (room === currentRoom) {
+      showSidebar(false);
+      return;
+    }
     currentRoom = room;
     messagesEl.innerHTML = '';
     msgInput.disabled = false;
     sendBtn.disabled = false;
-    setChatHeader(formatRoomTitle(room), onlineUsers.includes(formatRoomTitle(room)) ? 'Active now' : 'Direct message');
+    const title = formatRoomTitle(room);
+    setChatHeader(title, onlineUsers.includes(title) ? 'Active now' : 'Direct message');
     renderUserList();
     renderGroupList();
     socket.emit('join', { username: myUsername, room });
+    showSidebar(false);
   }
 
   // Connect
@@ -2144,10 +2198,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!myUsername) return alert('Sign in first');
     const dmName = dmRoomName(targetUser);
     if (!rooms.includes(dmName)) rooms.push(dmName);
-    setChatHeader(targetUser, onlineUsers.includes(targetUser) ? 'Active now' : 'Direct message');
+    const title = targetUser;
+    setChatHeader(title, onlineUsers.includes(title) ? 'Active now' : 'Direct message');
     msgInput.disabled = false;
     sendBtn.disabled = false;
     switchRoom(dmName);
+    showSidebar(false);
   }
 
   // --- Emoji picker ---
@@ -2225,6 +2281,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   loadBackground();
 
+  backBtn.addEventListener('click', () => showSidebar(true));
 });
 </script>
 </body>
