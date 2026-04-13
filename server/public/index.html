@@ -939,25 +939,106 @@
     background: rgba(255,255,255,0.1);
   }
 
-  /* ── NOTIFICATION ── */
+  /* ── NOTIFICATION (Incoming Call) ── */
   #call-notification {
     display: none;
     position: fixed;
     top: 30px;
     right: 30px;
     width: 340px;
-    background: var(--surface);
+    background: #1b1c28;
     border: 1px solid var(--accent);
     border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 200;
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    z-index: 500;
     animation: slide-in 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
   }
 
   @keyframes slide-in {
     from { transform: translateX(120%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Mobile Fullscreen WhatsApp-style Call */
+  @media (max-width: 600px) {
+    #call-notification {
+      top: 0;
+      right: 0;
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      border: none;
+      background: 
+        radial-gradient(circle at top right, rgba(123, 105, 255, 0.15), transparent 40%),
+        radial-gradient(circle at bottom left, rgba(88, 240, 192, 0.1), transparent 40%),
+        #131422;
+      display: none; /* controlled by JS */
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-around;
+      padding: 60px 20px;
+      animation: fade-up 0.4s ease-out;
+    }
+
+    #call-notification::before {
+      content: 'VIBE';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 8rem;
+      font-weight: 900;
+      color: rgba(255, 255, 255, 0.03);
+      letter-spacing: 0.5rem;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    @keyframes fade-up {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .notif-header {
+      flex-direction: column;
+      text-align: center;
+      gap: 20px;
+    }
+
+    #notif-avatar {
+      width: 120px !important;
+      height: 120px !important;
+      font-size: 2.5rem !important;
+      box-shadow: 0 0 30px var(--accent);
+    }
+
+    .notif-info h4 {
+      font-size: 1.8rem !important;
+      margin-top: 10px !important;
+    }
+
+    .notif-info span {
+      font-size: 1.1rem !important;
+      display: block;
+      margin-top: 5px;
+    }
+
+    .notif-actions {
+      width: 100%;
+      padding: 0 20px;
+      gap: 20px;
+    }
+
+    .notif-btn {
+      height: 65px;
+      border-radius: 20px !important;
+      font-size: 1.1rem !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
   }
 
   .notif-header {
@@ -1015,7 +1096,10 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: #000;
+    background: 
+      radial-gradient(circle at top right, rgba(123, 105, 255, 0.08), transparent 45%),
+      radial-gradient(circle at bottom left, rgba(88, 240, 192, 0.05), transparent 45%),
+      #0a0b14;
     z-index: 150;
     flex-direction: column;
   }
@@ -1047,7 +1131,7 @@
     padding: 10px;
     justify-content: center;
     align-items: center;
-    background: #0a0b14;
+    background: transparent;
     overflow-y: auto;
   }
 
@@ -2127,11 +2211,21 @@ document.addEventListener('DOMContentLoaded', function () {
       notifCaller.textContent = from;
       notifAvatar.textContent = getInitials(from);
       notifAvatar.style.cssText = avatarStyle(from);
-      callNotification.style.display = 'block';
+      
+      // Fullscreen logic for mobile via CSS class or flex
+      if (window.innerWidth <= 600) {
+        callNotification.style.display = 'flex';
+      } else {
+        callNotification.style.display = 'block';
+      }
+      
       playRingtone();
+      if (navigator.vibrate) navigator.vibrate([500, 300, 500, 300, 500]);
     });
 
     socket.on('call-accepted', ({ from, roomId }) => {
+      stopRingtone();
+      if (navigator.vibrate) navigator.vibrate(0);
       if (activeCallSession && activeCallSession.roomId === roomId) {
         // As initiator, join the room now
         currentRoom = roomId;
@@ -2358,6 +2452,7 @@ document.addEventListener('DOMContentLoaded', function () {
   callAcceptBtn.addEventListener('click', () => {
     if (!activeCallSession) return;
     stopRingtone();
+    if (navigator.vibrate) navigator.vibrate(0);
     socket.emit('call-accept', { 
       to: activeCallSession.caller,
       from: myUsername,
@@ -2376,6 +2471,7 @@ document.addEventListener('DOMContentLoaded', function () {
   callDeclineBtn.addEventListener('click', () => {
     if (!activeCallSession) return;
     stopRingtone();
+    if (navigator.vibrate) navigator.vibrate(0);
     socket.emit('call-decline', { 
       to: activeCallSession.caller,
       from: myUsername,
