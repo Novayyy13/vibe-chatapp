@@ -1,0 +1,21 @@
+{
+  "name": "VIBE Chat",
+  "short_name": "VIBE",
+  "description": "VIBE Chat - Connect with your vibe space.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1b1c28",
+  "theme_color": "#7b69ff",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192/7b69ff/ffffff?text=VIBE",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512/7b69ff/ffffff?text=VIBE",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

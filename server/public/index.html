@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#7b69ff" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="https://via.placeholder.com/192/7b69ff/ffffff?text=VIBE" />
   <title>VIBE</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
@@ -1006,6 +1009,143 @@
     opacity: 0.9;
     transform: scale(1.02);
   }
+
+  /* ── FULL CALL OVERLAY ── */
+  #full-call-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 150;
+    flex-direction: column;
+  }
+
+  #call-header-info {
+    padding: 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+  }
+
+  #call-participants {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  #remote-videos {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    justify-content: center;
+    align-items: center;
+    background: #0a0b14;
+    overflow-y: auto;
+  }
+
+  .remote-video-box {
+    position: relative;
+    background: #1b1c28;
+    border-radius: 12px;
+    overflow: hidden;
+    min-width: 280px;
+    flex: 1;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .remote-video-box video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .participant-label {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.5);
+    padding: 4px 10px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+  }
+
+  #local-video-mini {
+    position: absolute;
+    bottom: 100px;
+    right: 20px;
+    width: 120px;
+    height: 180px;
+    background: #000;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    overflow: hidden;
+    z-index: 20;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  }
+
+  #local-video-mini video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  #call-controls {
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    z-index: 10;
+  }
+
+  .control-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .control-btn:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.1);
+  }
+
+  .control-btn.hangup {
+    background: var(--red);
+  }
+
+  .control-btn.active {
+    background: var(--accent);
+  }
+
+  .control-btn.muted {
+    background: rgba(255, 74, 94, 0.2);
+    color: var(--red);
+    border: 1px solid var(--red);
+  }
 </style>
 </head>
 <body>
@@ -1137,6 +1277,16 @@
     <div style="font-size:1.45rem;font-weight:800;color:var(--accent);margin-bottom:8px;">Profile</div>
     <div id="profile-name" style="font-size:1.1rem;font-weight:700;color:var(--white);"></div>
     <div id="profile-status" style="color:var(--muted);font-size:0.94rem;margin:8px 0 16px;">Online VIBE user</div>
+    
+    <div style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 15px;">
+      <div style="font-size:0.8rem; color:var(--muted); text-transform:uppercase; margin-bottom:8px; font-weight:700;">Ringtone</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button id="test-ringtone-btn" type="button" style="padding:6px 12px; border-radius:6px; border:1.5px solid var(--border); background:transparent; color:var(--text); cursor:pointer; font-size:0.85rem;">Test Sound</button>
+        <input type="file" id="ringtone-input" accept="audio/*" style="display:none;" />
+        <button onclick="document.getElementById('ringtone-input').click()" type="button" style="padding:6px 12px; border-radius:6px; border:1.5px solid var(--border); background:transparent; color:var(--text); cursor:pointer; font-size:0.85rem;">Change Sound</button>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button id="profile-add" type="button" style="padding:10px 14px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#000;font-weight:700;cursor:pointer;">Add Contact</button>
       <button id="profile-chat" type="button" style="padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text);font-weight:700;cursor:pointer;">Start Chat</button>
@@ -1188,8 +1338,44 @@
   </div>
 </div>
 
+<div id="full-call-overlay">
+  <div id="call-header-info">
+    <div id="call-participants">In Call</div>
+    <div id="call-duration" style="color:var(--muted); font-size:0.9rem;">00:00</div>
+  </div>
+  
+  <div id="remote-videos">
+    <!-- Remote video streams here -->
+  </div>
+
+  <div id="local-video-mini">
+    <!-- Local self-view -->
+  </div>
+
+  <div id="call-controls">
+    <button class="control-btn" id="call-mic-toggle" title="Toggle Microphone">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+    </button>
+    <button class="control-btn" id="call-video-toggle" title="Toggle Video">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+    </button>
+    <button class="control-btn hangup" id="call-hangup-btn" title="End Call">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>
+    </button>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('SW registered: ', registration);
+      }).catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+    });
+  }
 
   const loginScreen   = document.getElementById('login-screen');
   const appEl         = document.getElementById('app');
@@ -1256,6 +1442,13 @@ document.addEventListener('DOMContentLoaded', function () {
   const notifAvatar = document.getElementById('notif-avatar');
   const callAcceptBtn = document.getElementById('call-accept-btn');
   const callDeclineBtn = document.getElementById('call-decline-btn');
+  const fullCallOverlay = document.getElementById('full-call-overlay');
+  const remoteVideosEl = document.getElementById('remote-videos');
+  const localVideoMini = document.getElementById('local-video-mini');
+  const callHangupBtn = document.getElementById('call-hangup-btn');
+  const callMicToggle = document.getElementById('call-mic-toggle');
+  const callVideoToggle = document.getElementById('call-video-toggle');
+  const callParticipantsLbl = document.getElementById('call-participants');
 
   let socket, myUsername = '', currentRoom = null;
   let rooms = [], typingTimeout;
@@ -1275,6 +1468,8 @@ document.addEventListener('DOMContentLoaded', function () {
   let inVoice = false, isMuted = false, localStream = null;
   let callType = null; // 'audio' | 'video' | 'screen' | null
   let activeCallSession = null;
+  let ringtoneAudio = null;
+  const ringtoneUrl = 'https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3';
   const peers = {}, audioEls = {};
   const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -1419,9 +1614,40 @@ document.addEventListener('DOMContentLoaded', function () {
       roomId: callRoomId
     });
 
+    const offlineUsersInCall = selectedCallContacts.filter(u => !onlineUsers.includes(u));
+    if (offlineUsersInCall.length > 0) {
+      offlineUsersInCall.forEach(u => {
+        socket.emit('message', { 
+          text: `[Missed Call] I tried to call you at ${new Date().toLocaleTimeString()}`, 
+          room: dmRoomName(u) 
+        });
+      });
+      alert(`Calling ${selectedCallContacts.length} people. Note: ${offlineUsersInCall.join(', ')} are currently offline and will see a missed call message.`);
+    } else {
+      alert('Calling ' + selectedCallContacts.join(', ') + '...');
+    }
+
     callOverlay.style.display = 'none';
-    // For now we just show a message, real join happens on acceptance
-    alert('Calling ' + selectedCallContacts.join(', ') + '...');
+    // Join the room as initiator
+    currentRoom = callRoomId;
+    setChatHeader('Voice Call', 'In call');
+    socket.emit('join', { username: myUsername, room: callRoomId });
+    startCall('audio');
+  }
+
+  function playRingtone() {
+    if (!ringtoneAudio) {
+      ringtoneAudio = new Audio(account?.ringtone || ringtoneUrl);
+      ringtoneAudio.loop = true;
+    }
+    ringtoneAudio.play().catch(e => console.log('Ringtone play failed:', e));
+  }
+
+  function stopRingtone() {
+    if (ringtoneAudio) {
+      ringtoneAudio.pause();
+      ringtoneAudio.currentTime = 0;
+    }
   }
 
   function esc(s) {
@@ -1596,7 +1822,36 @@ document.addEventListener('DOMContentLoaded', function () {
   createGroupBtn.addEventListener('click', openGroupOverlay);
   groupClose.addEventListener('click', () => { groupOverlay.style.display = 'none'; groupError.textContent = ''; });
   groupSaveBtn.addEventListener('click', saveGroup);
-  profileClose.addEventListener('click', () => { profileOverlay.style.display = 'none'; });
+  profileClose.addEventListener('click', () => { profileOverlay.style.display = 'none'; stopRingtone(); });
+
+  document.getElementById('test-ringtone-btn').addEventListener('click', () => {
+    if (ringtoneAudio && !ringtoneAudio.paused) {
+      stopRingtone();
+    } else {
+      playRingtone();
+      setTimeout(stopRingtone, 5000);
+    }
+  });
+
+  document.getElementById('ringtone-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!account) account = { username: myUsername, contacts: [] };
+        account.ringtone = event.target.result;
+        saveAccount();
+        if (ringtoneAudio) {
+          ringtoneAudio.src = account.ringtone;
+        } else {
+          ringtoneAudio = new Audio(account.ringtone);
+          ringtoneAudio.loop = true;
+        }
+        alert('Ringtone updated!');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 
   function sendVerificationCode() {
     const email = emailEl.value.trim();
@@ -1872,6 +2127,7 @@ document.addEventListener('DOMContentLoaded', function () {
       notifAvatar.textContent = getInitials(from);
       notifAvatar.style.cssText = avatarStyle(from);
       callNotification.style.display = 'block';
+      playRingtone();
     });
 
     socket.on('call-accepted', ({ from, roomId }) => {
@@ -2056,26 +2312,25 @@ document.addEventListener('DOMContentLoaded', function () {
       localStream = stream;
       inVoice = true;
       callType = type;
-      // update UI
-      if (type === 'screen') {
-        // show screen share panel with self-view
-        screenSharePanel.style.display = 'flex';
-        const selfVideo = document.createElement('video');
-        selfVideo.autoplay = true;
-        selfVideo.muted = true;
-        selfVideo.playsInline = true;
-        selfVideo.style.width = '100%';
-        selfVideo.style.height = '100%';
-        selfVideo.style.objectFit = 'contain';
-        selfVideo.srcObject = stream;
-        screenShareContainer.innerHTML = '';
-        screenShareContainer.appendChild(selfVideo);
-        ssVideoBtn.title = 'Video Off';
-        ssMuteBtn.title = 'Mute';
+      
+      fullCallOverlay.style.display = 'flex';
+      callMicToggle.classList.toggle('muted', false);
+      callVideoToggle.classList.toggle('active', type === 'video' || type === 'screen');
+      
+      localVideoMini.innerHTML = '';
+      if (type === 'video' || type === 'screen') {
+        const v = document.createElement('video');
+        v.srcObject = stream;
+        v.autoplay = true;
+        v.muted = true;
+        v.playsInline = true;
+        localVideoMini.appendChild(v);
+        localVideoMini.style.display = 'block';
       } else {
-        voiceBar.classList.add('visible');
-        screenSharePanel.style.display = 'none';
+        localVideoMini.style.display = 'none';
       }
+
+      voiceBar.classList.add('visible');
       voiceBtn.classList.toggle('active', type === 'audio');
       videoBtn.classList.toggle('active', type === 'video');
       socket.emit('voice-join');
@@ -2101,6 +2356,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   callAcceptBtn.addEventListener('click', () => {
     if (!activeCallSession) return;
+    stopRingtone();
     socket.emit('call-accept', { 
       to: activeCallSession.caller,
       from: myUsername,
@@ -2118,6 +2374,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   callDeclineBtn.addEventListener('click', () => {
     if (!activeCallSession) return;
+    stopRingtone();
     socket.emit('call-decline', { 
       to: activeCallSession.caller,
       from: myUsername,
@@ -2150,6 +2407,24 @@ document.addEventListener('DOMContentLoaded', function () {
     voiceBtn.classList.toggle('muted', isMuted);
   });
 
+  callMicToggle.addEventListener('click', () => {
+    isMuted = !isMuted;
+    if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    callMicToggle.classList.toggle('muted', isMuted);
+    muteBtn.classList.toggle('muted', isMuted);
+  });
+
+  callVideoToggle.addEventListener('click', () => {
+    if (!localStream) return;
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      callVideoToggle.classList.toggle('active', videoTrack.enabled);
+    }
+  });
+
+  callHangupBtn.addEventListener('click', leaveVoice);
+
   leaveBtn.addEventListener('click', leaveVoice);
 
   function leaveVoice() {
@@ -2158,6 +2433,9 @@ document.addEventListener('DOMContentLoaded', function () {
     videoBtn.classList.remove('active');
     voiceBar.classList.remove('visible');
     muteBtn.classList.remove('muted');
+    fullCallOverlay.style.display = 'none';
+    remoteVideosEl.innerHTML = '';
+    localVideoMini.innerHTML = '';
     screenSharePanel.style.display = 'none';
     screenShareContainer.innerHTML = '';
     Object.keys(peers).forEach(closePeer);
@@ -2177,16 +2455,29 @@ document.addEventListener('DOMContentLoaded', function () {
       const stream = e.streams[0];
       if (!stream) return;
       const hasVideo = stream.getVideoTracks().length > 0;
+      
       if (!audioEls[socketId]) {
+        const container = document.createElement('div');
+        container.className = 'remote-video-box';
+        container.id = `remote-box-${socketId}`;
+        
         const el = hasVideo ? document.createElement('video') : document.createElement('audio');
         el.autoplay = true;
         el.playsInline = true;
+        
         if (hasVideo) {
-          el.width = 200;
-          el.height = 140;
-          el.style.borderRadius = '8px';
+          const label = document.createElement('div');
+          label.className = 'participant-label';
+          // we don't have username directly here easily, but we can try to find it
+          label.textContent = 'Remote Participant';
+          container.appendChild(el);
+          container.appendChild(label);
+          remoteVideosEl.appendChild(container);
+        } else {
+          // just audio, add to hidden area or media container
+          if (mediaContainer) mediaContainer.appendChild(el); else document.body.appendChild(el);
         }
-        if (mediaContainer) mediaContainer.appendChild(el); else document.body.appendChild(el);
+        
         audioEls[socketId] = el;
       }
       audioEls[socketId].srcObject = stream;
@@ -2202,6 +2493,8 @@ document.addEventListener('DOMContentLoaded', function () {
   function closePeer(socketId) {
     if (peers[socketId])   { peers[socketId].close(); delete peers[socketId]; }
     if (audioEls[socketId]) { audioEls[socketId].remove(); delete audioEls[socketId]; }
+    const box = document.getElementById(`remote-box-${socketId}`);
+    if (box) box.remove();
   }
 
   // --- Direct Message helper ---
