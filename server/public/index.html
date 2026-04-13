@@ -1563,10 +1563,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function renderCallContactList() {
     callContactList.innerHTML = '';
-    const allUniqueContacts = [...new Set([...contacts, ...onlineUsers])].filter(c => c !== myUsername);
+    const allUniqueContacts = [...new Set([...onlineUsers, ...contacts, ...incomingRequests, ...sentRequests])]
+      .filter(c => c && c !== myUsername);
     
     if (allUniqueContacts.length === 0) {
-      callContactList.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;">No contacts online to call.</div>';
+      callContactList.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;">No contacts to call. Add some friends first!</div>';
       return;
     }
 
