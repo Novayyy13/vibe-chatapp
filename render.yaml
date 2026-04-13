@@ -2,8 +2,9 @@ services:
   - type: web
     name: vibe-chat-server
     runtime: node
+    rootDir: server
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
