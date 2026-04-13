@@ -3,9 +3,10 @@
   "private": true,
   "scripts": {
     "postinstall": "npm --prefix server install",
-    "start": "npm --prefix server start"
+    "start": "node server/server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   },
