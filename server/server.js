@@ -30,13 +30,14 @@ io.on('connection', (socket) => {
     broadcastUsers(room);
   });
 
-  socket.on('message', ({ text }) => {
-    if (!socket.room || !socket.username) return;
+  socket.on('message', ({ text, room }) => {
+    const targetRoom = room || socket.room;
+    if (!targetRoom || !socket.username) return;
     const msg = { user: socket.username, text, time: new Date().toISOString() };
-    if (!messageHistory[socket.room]) messageHistory[socket.room] = [];
-    messageHistory[socket.room].push(msg);
-    if (messageHistory[socket.room].length > 100) messageHistory[socket.room].shift();
-    io.to(socket.room).emit('message', msg);
+    if (!messageHistory[targetRoom]) messageHistory[targetRoom] = [];
+    messageHistory[targetRoom].push(msg);
+    if (messageHistory[targetRoom].length > 100) messageHistory[targetRoom].shift();
+    io.to(targetRoom).emit('message', msg);
   });
 
   socket.on('typing', (isTyping) => {
