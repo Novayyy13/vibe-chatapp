@@ -2060,61 +2060,41 @@ document.addEventListener('DOMContentLoaded', function () {
     const code = codeInputEl.value.trim();
 
     if (authMode === 'signup') {
-      if (!username) {
-        loginError.textContent = 'Enter your display name.';
-        usernameEl.focus();
-        return;
-      }
-      if (!email) {
-        loginError.textContent = 'Enter your email.';
-        emailEl.focus();
-        return;
-      }
-      if (!robotCheckEl.checked) {
-        loginError.textContent = 'Confirm that you are not a robot.';
-        return;
-      }
-      if (!codeSent) {
-        loginError.textContent = 'Send the verification code first.';
-        return;
-      }
-      if (code !== verificationCode) {
-        loginError.textContent = 'Verification code is incorrect.';
-        codeInputEl.focus();
-        return;
-      }
-      account = { username, email, contacts: [], pending: [], lastOnline: Date.now() };
-      contacts = [];
-      pendingRequests = [];
-      saveAccount();
+      if (!username) { loginError.textContent = 'Enter your display name.'; usernameEl.focus(); return; }
+      if (!email) { loginError.textContent = 'Enter your email.'; emailEl.focus(); return; }
+      if (!robotCheckEl.checked) { loginError.textContent = 'Confirm that you are not a robot.'; return; }
+      if (!codeSent) { loginError.textContent = 'Send the verification code first.'; return; }
+      if (code !== verificationCode) { loginError.textContent = 'Verification code is incorrect.'; codeInputEl.focus(); return; }
     } else {
-      if (!account) {
-        loginError.textContent = 'No VIBE account found. Please sign up.';
-        return;
-      }
-      if (!email) {
-        loginError.textContent = 'Enter your email.';
-        emailEl.focus();
-        return;
-      }
-      if (email !== account.email) {
-        loginError.textContent = 'Email does not match your VIBE account.';
-        emailEl.focus();
-        return;
-      }
-      usernameEl.value = account.username;
-      myUsername = account.username;
-      saveAccount();
+      if (!email) { loginError.textContent = 'Enter your email.'; emailEl.focus(); return; }
     }
 
     loginError.textContent = '';
     connectBtn.textContent = authMode === 'signup' ? 'Signing up...' : 'Logging in...';
     connectBtn.disabled = true;
 
-    socket = io({ transports: ['websocket', 'polling'] });
+    if (!socket) socket = io({ transports: ['websocket', 'polling'] });
 
-    socket.on('connect', () => {
+    setupSocketEvents();
+
+    if (authMode === 'signup') {
+      socket.emit('signup', { username, email });
+    } else {
+      socket.emit('login', { email });
+    }
+  }
+
+  function setupSocketEvents() {
+    if (socket._vibe_setup) return;
+    socket._vibe_setup = true;
+
+    socket.on('auth-success', (userData) => {
+      account = userData;
       myUsername = account.username;
+      contacts = account.contacts || [];
+      incomingRequests = account.pending || [];
+      saveAccount();
+
       currentRoom = null;
       loginScreen.style.display = 'none';
       appEl.style.display = 'flex';
@@ -2125,6 +2105,12 @@ document.addEventListener('DOMContentLoaded', function () {
       setupVoice();
       msgInput.focus();
       showSidebar(true);
+    });
+
+    socket.on('auth-error', (err) => {
+      loginError.textContent = err;
+      connectBtn.textContent = authMode === 'signup' ? 'Sign Up' : 'Login';
+      connectBtn.disabled = false;
     });
 
     socket.on('connect_error', () => {
@@ -2152,17 +2138,15 @@ document.addEventListener('DOMContentLoaded', function () {
     socket.on('search-results', updateSearchResults);
     socket.on('contact-request', ({ from }) => {
       if (!incomingRequests.includes(from)) incomingRequests.push(from);
-      saveAccount();
       renderUserList();
       if (contactSearchEl.value.trim().toLowerCase() === from.toLowerCase()) {
         performContactSearch();
       }
-      alert(`${from} wants to add you on VIBE. Press Enter on their name again to accept.`);
+      // alert(`${from} wants to add you on VIBE.`);
     });
     socket.on('contact-accepted', ({ from }) => {
       if (!contacts.includes(from)) contacts.push(from);
       sentRequests = sentRequests.filter(name => name !== from);
-      saveAccount();
       renderUserList();
       if (contactSearchEl.value.trim().toLowerCase() === from.toLowerCase()) {
         performContactSearch();
@@ -2198,33 +2182,20 @@ document.addEventListener('DOMContentLoaded', function () {
       notifAvatar.style.cssText = avatarStyle(from);
       
       // Fullscreen logic for mobile via CSS class or flex
-      if (window.innerWidth <= 600) {
-        callNotification.style.display = 'flex';
-      } else {
-        callNotification.style.display = 'block';
-      }
-      
-      playRingtone();
-      if (navigator.vibrate) navigator.vibrate([500, 300, 500, 300, 500]);
+      incNotif.classList.add('visible');
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+        audio.play().catch(e => {});
+      } catch(e) {}
     });
 
     socket.on('call-accepted', ({ from, roomId }) => {
-      stopRingtone();
-      if (navigator.vibrate) navigator.vibrate(0);
-      if (activeCallSession && activeCallSession.roomId === roomId) {
-        // As initiator, join the room now
-        currentRoom = roomId;
-        setChatHeader('Voice Call', 'In call');
-        socket.emit('join', { username: myUsername, room: roomId });
-        startCall('audio');
-      }
+      startCall('voice', roomId);
     });
 
-    socket.on('call-declined', ({ from, roomId }) => {
-      if (activeCallSession && activeCallSession.roomId === roomId) {
-        alert(`${from} declined the call.`);
-        activeCallSession = null;
-      }
+    socket.on('call-declined', ({ from }) => {
+      alert(`${from} declined the call.`);
+      endCall();
     });
   }
 
