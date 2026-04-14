@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,11 +11,23 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const HISTORY_FILE = path.join(__dirname, 'messages.json');
 
 // Serve the web client directly from the server
 app.use(express.static(path.join(__dirname, 'public')));
 
-const messageHistory = {};
+let messageHistory = {};
+try {
+  if (fs.existsSync(HISTORY_FILE)) {
+    messageHistory = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'));
+  }
+} catch (e) { console.error('Error loading history:', e); }
+
+function saveHistory() {
+  try {
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(messageHistory), 'utf8');
+  } catch (e) { console.error('Error saving history:', e); }
+}
 
 io.on('connection', (socket) => {
   console.log(`[+] Connected: ${socket.id}`);
@@ -25,8 +38,7 @@ io.on('connection', (socket) => {
     socket.join(room);
     if (!messageHistory[room]) messageHistory[room] = [];
     socket.emit('history', messageHistory[room]);
-    const sysMsg = { user: 'System', text: `${username} joined`, time: new Date().toISOString() };
-    io.to(room).emit('message', sysMsg);
+    socket.emit('rooms-list', Object.keys(messageHistory));
     broadcastUsers(room);
   });
 
@@ -37,6 +49,7 @@ io.on('connection', (socket) => {
     if (!messageHistory[targetRoom]) messageHistory[targetRoom] = [];
     messageHistory[targetRoom].push(msg);
     if (messageHistory[targetRoom].length > 100) messageHistory[targetRoom].shift();
+    saveHistory();
     io.to(targetRoom).emit('message', msg);
   });
 
@@ -124,7 +137,6 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     if (socket.room && socket.username) {
-      io.to(socket.room).emit('message', { user: 'System', text: `${socket.username} left`, time: new Date().toISOString() });
       if (socket.inVoice) socket.to(socket.room).emit('voice-user-left', { socketId: socket.id });
       broadcastUsers(socket.room);
     }
